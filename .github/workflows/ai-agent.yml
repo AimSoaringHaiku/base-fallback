@@ -15,13 +15,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Call Gemini via GitHub Models API Direct
+      - name: Call Gemini and Save to File
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DIS_TITLE: ${{ github.event.discussion.title }}
           DIS_BODY: ${{ github.event.discussion.body }}
         run: |
-          # エスケープ処理を施してJSONのペイロードを作成
+          # ペイロード作成
           PAYLOAD=$(jq -n \
             --arg title "$DIS_TITLE" \
             --arg body "$DIS_BODY" \
@@ -30,7 +30,7 @@ jobs:
               messages: [
                 {
                   role: "system",
-                  content: "あなたは「人類AI皆師匠」の精神を持つ、優秀なセカンドブレイン（AIエージェント）です。ユーザーがDiscussionsに投稿したメモを読み、既存の知識を動員して綺麗に肉付け・構造化し、`_doc/templates/wiki-template.md` の型（フロントマター構造）を真似て、Markdown形式で出力してください。"
+                  content: "あなたは「人類AI皆師匠」の精神を持つ、優秀なセカンドブレイン（AIエージェント）です。ユーザーがDiscussionsに投稿したメモを読み、既存の知識を動員して綺麗に肉付け・構造化し、`_doc/templates/wiki-template.md` の型（フロントマター構造）を完全に真似て、生のMarkdown形式（余計なJSONの枠やエスケープ、先頭末尾の ```markdown などの装飾文字は一切排除し、--- から始まる生のテキスト）のみを出力してください。"
                 },
                 {
                   role: "user",
@@ -39,15 +39,30 @@ jobs:
               ]
             }')
 
-          echo "==== Gemini API に通信中... ===="
-          
-          # GitHub Models API へ直接リクエストを送信
-          RESPONSE=$(curl -s -X POST "https://models.inference.ai.azure.com/chat/completions" \
+          # APIへリクエスト送信
+          RESPONSE=$(curl -s -X POST "[https://models.inference.ai.azure.com/chat/completions](https://models.inference.ai.azure.com/chat/completions)" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -d "$PAYLOAD")
 
-          echo "==== Gemini Brain Output ===="
-          # APIの返答から文章部分（Markdown）だけを綺麗に抽出してログに表示
-          echo "$RESPONSE" | jq -r '.choices[0].message.content'
-          echo "============================="
+          # Geminiの返答テキストだけを綺麗に抽出
+          RESULT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
+
+          # 競合を防ぐための一意なファイル名を生成（日付ベース）
+          FILENAME="_doc/wiki-$(date +'%Y%m%d%H%M%S').md"
+
+          # 結果をファイルとして保存
+          echo "$RESULT" > "$FILENAME"
+          echo "==== 保存されたファイル: $FILENAME ===="
+          cat "$FILENAME"
+
+      - name: Commit and Push generated WIKI
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add _doc/*.md
+          # 変更がある場合のみコミット＆プッシュを実行
+          if ! git diff --cached --exit-code --quiet; then
+            git commit -m "Docs: Gemini が WIKI ナレッジを自動生成しました"
+            git push origin main
+          fi
