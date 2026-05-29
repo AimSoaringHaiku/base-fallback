@@ -15,28 +15,39 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Call Gemini via GitHub Models
-        id: gemini
-        uses: github/cognitive-services-action@v1 # ← 正しい公式部品の名前に修正しました
-        with:
-          model: "gemini-1.5-pro" # 安定して動く小文字表記に統一
-          prompt: |
-            あなたは「人類AI皆師匠」の精神を持つ、優秀なセカンドブレイン（AIエージェント）です。
-            ユーザーがDiscussionsに投稿した以下のメモを読み、既存の知識を動員して綺麗に肉付け・構造化し、ナレッジとして清書してください。
-
-            ■ユーザーの一言メモタイトル:
-            ${{ github.event.discussion.title }}
-
-            ■一言メモ本文:
-            ${{ github.event.discussion.body }}
-
-            ■出力フォーマット:
-            `_doc/templates/wiki-template.md` の型（フロントマター構造）を真似て、Markdown形式で出力してください。
+      - name: Call Gemini via GitHub Models API Direct
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Log Gemini Response
+          DIS_TITLE: ${{ github.event.discussion.title }}
+          DIS_BODY: ${{ github.event.discussion.body }}
         run: |
+          # エスケープ処理を施してJSONのペイロードを作成
+          PAYLOAD=$(jq -n \
+            --arg title "$DIS_TITLE" \
+            --arg body "$DIS_BODY" \
+            '{
+              model: "gemini-1.5-pro",
+              messages: [
+                {
+                  role: "system",
+                  content: "あなたは「人類AI皆師匠」の精神を持つ、優秀なセカンドブレイン（AIエージェント）です。ユーザーがDiscussionsに投稿したメモを読み、既存の知識を動員して綺麗に肉付け・構造化し、`_doc/templates/wiki-template.md` の型（フロントマター構造）を真似て、Markdown形式で出力してください。"
+                },
+                {
+                  role: "user",
+                  content: ("■タイトル:\n" + $title + "\n\n■本文:\n" + $body)
+                }
+              ]
+            }')
+
+          echo "==== Gemini API に通信中... ===="
+          
+          # GitHub Models API へ直接リクエストを送信
+          RESPONSE=$(curl -s -X POST "https://models.inference.ai.azure.com/chat/completions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -d "$PAYLOAD")
+
           echo "==== Gemini Brain Output ===="
-          echo "${{ steps.gemini.outputs.response }}" # 取得する出力名も最適化
+          # APIの返答から文章部分（Markdown）だけを綺麗に抽出してログに表示
+          echo "$RESPONSE" | jq -r '.choices[0].message.content'
           echo "============================="
