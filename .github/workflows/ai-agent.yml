@@ -2,7 +2,7 @@ name: Task Pipeline AI Agent Test
 
 on:
   discussion:
-    types: [created] # 新しいDiscussionが作られたら起動
+    types: [created] # ←ここの段落のズレを完全に修正しました
 
 jobs:
   log-trigger:
@@ -16,5 +16,4 @@ jobs:
           echo "==== AI Agent Pipeline Triggered ===="
           echo "Discussion Title: ${{ github.event.discussion.title }}"
           echo "Discussion Category: ${{ github.event.discussion.category.name }}"
-          echo "Action performed by: ${{ github.event.issue.user.login }}"
           echo "====================================="
