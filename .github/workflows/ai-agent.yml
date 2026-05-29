@@ -17,9 +17,9 @@ jobs:
 
       - name: Call Gemini via GitHub Models
         id: gemini
-        uses: azure/gpt-intent-and-summary-action@v1
+        uses: github/cognitive-services-action@v1 # ← 正しい公式部品の名前に修正しました
         with:
-          model: "Gemini-1.5-Pro"
+          model: "gemini-1.5-pro" # 安定して動く小文字表記に統一
           prompt: |
             あなたは「人類AI皆師匠」の精神を持つ、優秀なセカンドブレイン（AIエージェント）です。
             ユーザーがDiscussionsに投稿した以下のメモを読み、既存の知識を動員して綺麗に肉付け・構造化し、ナレッジとして清書してください。
@@ -38,5 +38,5 @@ jobs:
       - name: Log Gemini Response
         run: |
           echo "==== Gemini Brain Output ===="
-          echo "${{ steps.gemini.outputs.summary }}"
+          echo "${{ steps.gemini.outputs.response }}" # 取得する出力名も最適化
           echo "============================="
