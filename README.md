@@ -23,3 +23,29 @@ base-fallback/
 ## 🚀 自動化パイプラインのデータフロー（セカンドブレイン）
 
 LINE感覚で投げられた「一言メモ」を、使い慣れたGeminiが裏側で自律的に綺麗に整流し、永続的なナレッジ（WIKI）へと昇華させるためのデータの流れです。
+
+【1. インプット（人間）】
+スマホやブラウザから GitHub Discussions へラフに一言投稿
+「arscontextaの役割って何だっけ？」
+│
+▼ （Discussions検知トリガーが自動発動）
+【2. トリガー＆収集（GitHub Actions）】
+・.github/workflows/ai-agent.yml がピクッと起動
+・リポジトリから _doc/skills/skill-research.md（Geminiへの指示書）を読み込む
+・_doc/templates/wiki-template.md（WIKIの型）を読み込む
+│
+▼ （すべてをガッチャンコして脳みそへパス）
+【3. 思考・パース（GitHub Models API：Gemini 1.5 Pro等）】
+・指示書に従い、ユーザーの「一言メモ」の背景やナレッジ分野を分析
+・既存の知識と照合・肉付けし、テンプレートの型に沿った美しいMarkdownを生成
+│
+▼ （綺麗なデータをアウトプット）
+【4. 永続化（GitHub Actions）】
+・受け取ったMarkdownデータを _doc/ または WIKI の適切なページとして自動保存
+・リポジトリへ自動でコミット＆プッシュ！
+
+
+## 🧠 使用モデル（AIエージェントの頭脳）
+- **GitHub Models: Gemini 1.5 Pro / Flash** - これまで議論を重ねてきたパラダイムやコンテキストを最も深くパースできる、人見知りしない大本命のパートナー。
+
+LINE感覚で投げられた「一言メモ」を、使い慣れたGeminiが裏側で自律的に綺麗に整流し、永続的なナレッジ（WIKI）へと昇華させるためのデータの流れです。
