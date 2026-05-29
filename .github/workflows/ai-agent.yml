@@ -2,13 +2,8 @@ name: Task Pipeline AI Agent (Gemini Core)
 
 on:
   discussion:
-<<<<<<< HEAD
     types: [created]
-=======
-    types: [created] # ←ここの段落のズレを完全に修正しました
->>>>>>> 9f843be096ffb7795919480f91521818e09ea07a
 
-# WIKIやファイルへの書き込み権限をActionsに与える設定
 permissions:
   contents: write
   discussions: read
@@ -20,25 +15,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-<<<<<<< HEAD
       - name: Call Gemini via GitHub Models
         id: gemini
-        uses: azure/gpt-intent-and-summary-action@v1 # GitHub Models公式連携コンポーネント
+        uses: azure/gpt-intent-and-summary-action@v1
         with:
-          # 脳みそに人見知りしない Gemini を指定
-          model: "Gemini-1.5-Pro" 
-          # Geminiへの指示（一言メモをWIKIテンプレートの型にはめる命令）
+          model: "Gemini-1.5-Pro"
           prompt: |
             あなたは「人類AI皆師匠」の精神を持つ、優秀なセカンドブレイン（AIエージェント）です。
             ユーザーがDiscussionsに投稿した以下のメモを読み、既存の知識を動員して綺麗に肉付け・構造化し、ナレッジとして清書してください。
-=======
-      - name: Detect Discussion Event
-        run: |
-          echo "==== AI Agent Pipeline Triggered ===="
-          echo "Discussion Title: ${{ github.event.discussion.title }}"
-          echo "Discussion Category: ${{ github.event.discussion.category.name }}"
-          echo "====================================="
->>>>>>> 9f843be096ffb7795919480f91521818e09ea07a
 
             ■ユーザーの一言メモタイトル:
             ${{ github.event.discussion.title }}
@@ -49,7 +33,6 @@ jobs:
             ■出力フォーマット:
             `_doc/templates/wiki-template.md` の型（フロントマター構造）を真似て、Markdown形式で出力してください。
         env:
-          # 鍵を裏側に完全に隠す魔法の1行
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log Gemini Response
