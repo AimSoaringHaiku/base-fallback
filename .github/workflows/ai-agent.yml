@@ -1,4 +1,4 @@
-name: Task Pipeline AI Agent (Gemini Core)
+name: Task Pipeline AI Agent (Core)
 
 on:
   discussion:
@@ -9,28 +9,28 @@ permissions:
   discussions: read
 
 jobs:
-  gemini-brain:
+  ai-brain:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Call Gemini and Save to File
+      - name: Call AI Models API and Save to File
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DIS_TITLE: ${{ github.event.discussion.title }}
           DIS_BODY: ${{ github.event.discussion.body }}
         run: |
-          # ペイロード作成
+          # 確実に制限を突破できる gpt-4o を指定
           PAYLOAD=$(jq -n \
             --arg title "$DIS_TITLE" \
             --arg body "$DIS_BODY" \
             '{
-              model: "gemini-1.5-pro",
+              model: "gpt-4o",
               messages: [
                 {
                   role: "system",
-                  content: "あなたは「人類AI皆師匠」の精神を持つ、優秀なセカンドブレイン（AIエージェント）です。ユーザーがDiscussionsに投稿したメモを読み、既存の知識を動員して綺麗に肉付け・構造化し、`_doc/templates/wiki-template.md` の型（フロントマター構造）を完全に真似て、生のMarkdown形式（余計なJSONの枠やエスケープ、先頭末尾の ```markdown などの装飾文字は一切排除し、--- から始まる生のテキスト）のみを出力してください。"
+                  content: "あなたは優秀なセカンドブレイン（AIエージェント）です。ユーザーがDiscussionsに投稿したメモを読み、既存の知識を動員して綺麗に肉付け・構造化し、必ず --- で始まるフロントマター構造（id, title, category, created_at, updated_at）を含めた Markdown形式で出力してください。余計なJSONの枠や先頭末尾の ```markdown などの装飾は一切排除し、生のテキストのみを返してください。"
                 },
                 {
                   role: "user",
@@ -39,21 +39,31 @@ jobs:
               ]
             }')
 
-          # APIへリクエスト送信
+          # GitHub Models API へリクエスト送信
           RESPONSE=$(curl -s -X POST "[https://models.inference.ai.azure.com/chat/completions](https://models.inference.ai.azure.com/chat/completions)" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             -d "$PAYLOAD")
 
-          # Geminiの返答テキストだけを綺麗に抽出
+          # 返答から文章を抽出
           RESULT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
 
-          # 競合を防ぐための一意なファイル名を生成（日付ベース）
+          # 返答が空（null）だった場合の安全弁
+          if [ "$RESULT" = "null" ] || [ -z "$RESULT" ]; then
+            echo "APIからの応答が空でした。レスポンスログ:"
+            echo "$RESPONSE"
+            exit 1
+          fi
+
+          # フォルダを物理的に強制作成 (_doc)
+          mkdir -p _doc
+
+          # ファイル名を生成
           FILENAME="_doc/wiki-$(date +'%Y%m%d%H%M%S').md"
 
-          # 結果をファイルとして保存
+          # ファイルに書き込み
           echo "$RESULT" > "$FILENAME"
-          echo "==== 保存されたファイル: $FILENAME ===="
+          echo "==== 生成されたドキュメント ===="
           cat "$FILENAME"
 
       - name: Commit and Push generated WIKI
@@ -61,8 +71,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add _doc/*.md
-          # 変更がある場合のみコミット＆プッシュを実行
           if ! git diff --cached --exit-code --quiet; then
-            git commit -m "Docs: Gemini が WIKI ナレッジを自動生成しました"
+            git commit -m "Docs: AI が WIKI ナレッジを自動生成しました"
             git push origin main
           fi
